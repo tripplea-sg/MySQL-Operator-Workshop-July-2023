@@ -1,9 +1,10 @@
 ## MySQL Operator Workshop
 
 ### Start minikube
-The following command aims to start minikube using 4 vCPU and 11 GB RAM
+The following command aims to start minikube using 4 OCPU and 11 GB RAM
 ```
-minikube start --driver=podman cpus 4 --memory 11962 --extra-config=kubeadm.pod-network-cidr=10.0.0.0/16
+minikube delete --all
+minikube start --driver=podman
 ```
 See what are images available on minikube's docker local registry
 ```
@@ -21,7 +22,94 @@ ssh -i ~/.minikube/machines/minikube/id_rsa docker@$(minikube ip) -- docker load
 ssh -i ~/.minikube/machines/minikube/id_rsa docker@$(minikube ip) -- docker load -i /home/docker/mysql-enterprise-server-8.0.33.tar
 ssh -i ~/.minikube/machines/minikube/id_rsa docker@$(minikube ip) -- docker load -i /home/docker/mysql-enterprise-router-8.0.33.tar
 ```
+TAGS those images as follow:
+```
+ssh -i ~/.minikube/machines/minikube/id_rsa docker@$(minikube ip) -- docker tag mysql/enterprise-operator:8.0.32-2.0.8 container-registry.oracle.com/mysql/enterprise-operator:8.0.32-2.0.8
+ssh -i ~/.minikube/machines/minikube/id_rsa docker@$(minikube ip) -- docker tag mysql/enterprise-server:8.0 container-registry.oracle.com/mysql/enterprise-server:8.0.32
+ssh -i ~/.minikube/machines/minikube/id_rsa docker@$(minikube ip) -- docker tag mysql/enterprise-router:8.0 container-registry.oracle.com/mysql/enterprise-router:8.0.32
+```
 See what are images available on minikube's docker local registry
 ```
 minikube ssh 'docker images'
+```
+### Install MySQL Enterprise Operator
+First install the Custom Resource Definition (CRD) used by MySQL Operator for Kubernetes: 
+```
+kubectl apply -f https://raw.githubusercontent.com/mysql/mysql-operator/trunk/deploy/deploy-crds.yaml
+```
+Download Manifest
+```
+wget https://raw.githubusercontent.com/mysql/mysql-operator/trunk/deploy/deploy-operator.yaml
+```
+Edit manifest to change image and imagePullPolicy as follow:
+```
+image: container-registry.oracle.com/mysql/enterprise-operator:8.0.32-2.0.8
+imagePullPolicy: Never
+```
+Apply manifest
+```
+kubectl apply -f deploy-operator.yaml
+```
+Wait until mysql-operator is running. Once running, then check below:
+```
+kubectl -n mysql-operator exec -it mysql-operator-5f75574846-64w2c -- mysqlsh --version
+```
+Check if MySQL Enterprise Operator deployment is successful
+```
+kubectl get ns
+
+kubectl -n mysql-operator get pod
+```
+### Deploy InnoDB Cluster
+Create namespace
+```
+kubectl create ns mysql-cluster
+```
+Create Secret
+```
+kubectl -n mysql-cluster create secret generic mypwds \
+        --from-literal=rootUser=root \
+        --from-literal=rootHost=% \
+        --from-literal=rootPassword="root"
+```
+See our YAML
+```
+apiVersion: mysql.oracle.com/v2
+kind: InnoDBCluster
+metadata:
+  name: mycluster
+  namespace: mysql-cluster
+spec:
+  imagePullPolicy: Never
+  secretName: mypwds
+  tlsUseSelfSigned: true
+  edition: enterprise
+  instances: 3
+  router:
+    instances: 1
+```
+Run our YAML to deploy innodb cluster
+```
+kubectl apply -f mycluster.yaml
+```
+Check our InnoDB Cluster
+```
+kubectl -n mysql-cluster get ic --watch
+```
+Check our InnoDB Cluster pods
+```
+kubectl -n mysql-cluster get pod
+```
+Check our InnoDB Cluster status using MySQL Shell
+```
+kubectl -n mysql-cluster exec -it mycluster-0 -c mysql -- mysqlsh root:root@localhost:3306 -- cluster status
+```
+Check MySQL version:
+```
+kubectl -n mysql-cluster exec -it mycluster-0 -c mysql -- mysqld --version
+kubectl -n mysql-cluster exec -it mycluster-0 -- mysqlsh --version
+```
+Check MySQL Router version
+```
+kubectl -n mysql-cluster exec -it mycluster-router-c6f658786-2klw2 -- mysqlrouter --version
 ```

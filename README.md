@@ -174,33 +174,5 @@ Check backup files in minikube file system
 ```
 minikube ssh 'sudo ls /tmp/'
 ```
-### Cloning to another InnoDB Cluster
-See the following clone.yaml
-```
-apiVersion: mysql.oracle.com/v2
-kind: InnoDBCluster
-metadata:
-  namespace: mysql-cluster
-  name: copycluster
-spec:
-  imagePullPolicy: Never
-  secretName: mypwds
-  tlsUseSelfSigned: true
-  edition: enterprise
-  instances: 1
-  tlsUseSelfSigned: true
-  initDB:
-    clone:
-      donorUrl: root@mycluster-0.mycluster-instances.testns.svc.cluster.local:3306
-      secretKeyRef:
-        name: donorpwds
-```
-Apply the clone yaml
-```
-kubectl apply -f clone.yaml
-
-kubectl -n mysql-cluster get ic
-```
-
 More information: https://dev.mysql.com/doc/mysql-operator/en/mysql-operator-introduction.html
 

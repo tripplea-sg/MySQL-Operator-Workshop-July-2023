@@ -120,6 +120,9 @@ Get more information using describe
 kubectl -n mysql-cluster describe ic mycluster
 kubectl -n mysql-cluster describe sts mycluster
 kubectl -n mysql-cluster describe deployment mycluster-router
+kubectl -n mysql-cluster describe svc mycluster
+kubectl -n mysql-cluster describe svc mycluster-instances
+
 ```
 Check our InnoDB Cluster status using MySQL Shell
 ```
@@ -134,4 +137,38 @@ Check MySQL Router version
 ```
 kubectl -n mysql-cluster exec -it mycluster-router-c6f658786-2klw2 -- mysqlrouter --version
 ```
+Scaling Up MySQL Router
+```
+kubectl -n mysql-cluster edit ic mycluster
+
+# change router instances from 1 to 2 and save to exit
+
+kubectl -n mysql-cluster get pod
+```
+### Connect using MySQL Shell through MySQL Router
+Run MySQL Shell pod
+```
+kubectl -n mysql-cluster run --rm -it myshell --image=container-registry.oracle.com/mysql/community-operator -- mysqlsh
+```
+Connect to InnoDB Cluster via Router's clusterIP
+```
+\connect root:root@mycluster:6446
+\sql
+select @@hostname;
+```
+### Backup MySQL using MySQL Shell
+Modify our cluster to add backup volume
+```
+kubectl apply -f mycluster-with-backup.yaml
+
+kubectl -n mysql-cluster get pv
+kubectl -n mysql-cluster get pvc
+kubectl -n mysql-cluster describe ic mycluster
+kubectl -n mysql-cluster describe sts mycluster
+```
+Run One Time Backup
+```
+kubectl apply -f one-time-backup.yaml
+```
+More information: https://dev.mysql.com/doc/mysql-operator/en/mysql-operator-introduction.html
 

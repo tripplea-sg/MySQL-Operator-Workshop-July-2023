@@ -100,6 +100,27 @@ Check our InnoDB Cluster pods
 ```
 kubectl -n mysql-cluster get pod
 ```
+Check PV/PVC
+```
+kubectl -n mysql-cluster get pv
+kubectl -n mysql-cluster get pvc
+```
+Check secret
+```
+kubectl -n mysql-cluster get secret
+```
+Check all
+```
+kubectl -n mysql-cluster get all
+
+kubectl -n mysql-cluster get svc
+```
+Get more information using describe
+```
+kubectl -n mysql-cluster describe ic mycluster
+kubectl -n mysql-cluster describe sts mycluster
+kubectl -n mysql-cluster describe deployment mycluster-router
+```
 Check our InnoDB Cluster status using MySQL Shell
 ```
 kubectl -n mysql-cluster exec -it mycluster-0 -c mysql -- mysqlsh root:root@localhost:3306 -- cluster status
@@ -113,3 +134,4 @@ Check MySQL Router version
 ```
 kubectl -n mysql-cluster exec -it mycluster-router-c6f658786-2klw2 -- mysqlrouter --version
 ```
+
